@@ -30,3 +30,5 @@ require (
 )
 
 replace github.com/prometheus/prometheus => github.com/prometheus/prometheus v1.8.2-0.20201130085533-a6e18916ab40
+
+replace github.com/aquasecurity/libbpfgo => /home/deparker/Data/Code/libbpfgo
