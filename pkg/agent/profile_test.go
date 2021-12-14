@@ -13,7 +13,7 @@ import (
 
 func TestCgroupProfiler(t *testing.T) {
 	var (
-		unit           = "syslog.service"
+		unit           = "docker.service"
 		logger         = log.NewNopLogger()
 		ksymCache      = ksym.NewKsymCache(logger)
 		ctx            = context.Background()
