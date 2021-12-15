@@ -6,6 +6,7 @@ require (
 	github.com/alecthomas/kong v0.2.20
 	github.com/aquasecurity/libbpfgo v0.2.2-libbpf-0.5.0
 	github.com/cespare/xxhash/v2 v2.1.2
+	github.com/containerd/cgroups v1.0.2 // indirect
 	github.com/containerd/containerd v1.5.7 // indirect
 	github.com/docker/docker v20.10.11+incompatible
 	github.com/go-kit/log v0.2.0
@@ -31,4 +32,4 @@ require (
 
 replace github.com/prometheus/prometheus => github.com/prometheus/prometheus v1.8.2-0.20201130085533-a6e18916ab40
 
-replace github.com/aquasecurity/libbpfgo => /home/deparker/Data/Code/libbpfgo
+replace github.com/aquasecurity/libbpfgo => /home/deparker/Code/libbpfgo

@@ -2,10 +2,12 @@ package agent
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/containerd/cgroups"
 	"github.com/go-kit/log"
 	"github.com/parca-dev/parca-agent/pkg/debuginfo"
 	"github.com/parca-dev/parca-agent/pkg/ksym"
@@ -32,8 +34,9 @@ func TestCgroupProfiler(t *testing.T) {
 		NewNoopProfileStoreClient(),
 		debuginfo.NewNoopClient(),
 		&SystemdUnitTarget{
-			Name:     unit,
-			NodeName: "testnode",
+			Name:       unit,
+			NodeName:   "testnode",
+			cgroupMode: cgroups.Mode(),
 		},
 		10*time.Second,
 		sink,
@@ -52,11 +55,11 @@ func TestCgroupProfiler(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-	case <-time.After(1 * time.Second):
+	case <-time.After(16 * time.Second): // Allow enough time for profiling to complete.
 		t.Fatal("timed out waiting for profiler to run")
 	}
 }
 
 func sink(r Record) {
-
+	fmt.Printf("%v\n", len(r.Profile.Function))
 }
