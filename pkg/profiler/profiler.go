@@ -44,6 +44,13 @@ import (
 	"github.com/parca-dev/parca-agent/pkg/maps"
 	"github.com/parca-dev/parca-agent/pkg/perf"
 )
+import (
+	"bufio"
+	"path"
+	"strconv"
+
+	"github.com/parca-dev/parca-agent/pkg/process"
+)
 
 //go:embed parca-agent.bpf.o
 var bpfObj []byte
@@ -148,6 +155,10 @@ func (p *CgroupProfiler) Run(ctx context.Context) error {
 	ctx, p.cancel = context.WithCancel(ctx)
 	p.mtx.Unlock()
 
+	// TODO(derekparker): Right about here we should try to detect the process and
+	// then prepare it for profiling. How can I get the PID here? It must be the kernel
+	// global pid as well.
+
 	m, err := bpf.NewModuleFromBufferArgs(bpf.NewModuleArgs{
 		BPFObjBuff: bpfObj,
 		BPFObjName: "parca",
@@ -162,13 +173,19 @@ func (p *CgroupProfiler) Run(ctx context.Context) error {
 		return fmt.Errorf("load bpf object: %w", err)
 	}
 
-	cgroup, err := os.Open(string(p.target[agent.CgroupPathLabelName]))
+	cgroupPath := string(p.target[agent.CgroupPathLabelName])
+	cgroup, err := os.Open(cgroupPath)
 	if err != nil {
 		return fmt.Errorf("open cgroup: %w", err)
 	}
 	defer cgroup.Close()
 
+	if err := prepareProcesses(cgroupPath); err != nil {
+		return fmt.Errorf("prepare processes: %w", err)
+	}
+
 	cpus := runtime.NumCPU()
+	var links []*bpf.BPFLink
 	for i := 0; i < cpus; i++ {
 		// TODO(branz): Close the returned fd
 		fd, err := unix.PerfEventOpen(&unix.PerfEventAttr{
@@ -190,11 +207,11 @@ func (p *CgroupProfiler) Run(ctx context.Context) error {
 		// Because this is fd based, even if our program crashes or is ended
 		// without proper shutdown, things get cleaned up appropriately.
 
-		// TODO(brancz): destroy the returned link via bpf_link__destroy
-		_, err = prog.AttachPerfEvent(fd)
+		link, err := prog.AttachPerfEvent(fd)
 		if err != nil {
 			return fmt.Errorf("attach perf event: %w", err)
 		}
+		links = append(links, link)
 	}
 
 	counts, err := m.GetMap("counts")
@@ -214,6 +231,9 @@ func (p *CgroupProfiler) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
+			for _, link := range links {
+				link.Destroy()
+			}
 			return ctx.Err()
 		case <-ticker.C:
 		}
@@ -227,6 +247,34 @@ func (p *CgroupProfiler) Run(ctx context.Context) error {
 
 		p.loopReport(t, err)
 	}
+}
+
+func prepareProcesses(cgroupPath string) error {
+	procs, err := os.Open(path.Join(cgroupPath, "cgroup.procs"))
+	if err != nil {
+		return fmt.Errorf("open cgroup.procs: %w", err)
+	}
+	defer procs.Close()
+
+	rdr := bufio.NewReader(procs)
+	for line, err := rdr.ReadString('\n'); err != io.EOF; line, err = rdr.ReadString('\n') {
+		if err != nil {
+			return fmt.Errorf("read cgroup.procs: %w", err)
+		}
+		pid, err := strconv.Atoi(string(line))
+		if err != nil {
+			return fmt.Errorf("parse cgroup.procs: %w", err)
+		}
+		p, err := process.Detect(pid)
+		if err != nil {
+			return fmt.Errorf("attach pid: %w", err)
+		}
+		if err := p.PrepareToProfile(); err != nil {
+			return fmt.Errorf("error preparing process %d to profile: %w", pid, err)
+		}
+	}
+
+	return nil
 }
 
 func (p *CgroupProfiler) profileLoop(ctx context.Context, now time.Time, counts, stackTraces *bpf.BPFMap) error {
