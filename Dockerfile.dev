@@ -5,7 +5,7 @@ deb http://deb.debian.org/debian bullseye-backports main\n\
 " >> /etc/apt/sources.list
 
 RUN apt-get update -y && \
-      apt-get install -y clang-11 make gcc coreutils elfutils binutils zlib1g-dev libelf-dev ca-certificates netbase && \
+      apt-get install -y clang-11 make gcc coreutils elfutils binutils zlib1g-dev libelf-dev ca-certificates netbase git cmake default-jdk && \
       ln -s /usr/bin/clang-11 /usr/bin/clang && \
       ln -s /usr/bin/llc-11 /usr/bin/llc
 WORKDIR /parca-agent
@@ -24,5 +24,9 @@ RUN make build
 
 RUN cp /parca-agent/dist/parca-agent /bin/parca-agent
 RUN mkdir -p /tmp
+
+ENV JAVA_HOME=/usr/lib/jvm/default-java
+RUN mkdir -p /java-agent
+RUN pushd /java-agent && cmake . && make && bin/create-links-in /usr/local/bin && popd
 
 CMD ["/bin/parca-agent"]

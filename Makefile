@@ -55,7 +55,7 @@ $(OUT_DIR):
 	mkdir -p $@
 
 .PHONY: build
-build: $(OUT_BIN) $(OUT_BIN_DEBUG_INFO)
+build: $(OUT_BIN) $(OUT_BIN_DEBUG_INFO) bpf
 
 go_env := GOOS=linux GOARCH=$(ARCH:x86_64=amd64) CC=$(CMD_CLANG) CGO_CFLAGS="-I $(abspath $(LIBBPF_HEADERS))" CGO_LDFLAGS="$(abspath $(LIBBPF_OBJ))"
 ifndef DOCKER

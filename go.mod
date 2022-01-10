@@ -14,7 +14,6 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/ianlancetaylor/demangle v0.0.0-20200824232613-28f6c0f3b639
 	github.com/minio/highwayhash v1.0.2
-	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect
 	github.com/oklog/run v1.1.0
 	github.com/opencontainers/runtime-spec v1.0.3-0.20210326190908-1c3f411f0417
 	github.com/parca-dev/parca v0.0.0-20210831075758-4d575344697c
@@ -28,6 +27,11 @@ require (
 	k8s.io/apimachinery v0.23.1
 	k8s.io/client-go v0.23.1
 	k8s.io/cri-api v0.23.1
+)
+
+require (
+	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect
+	github.com/opencontainers/image-spec v1.0.2 // indirect
 )
 
 replace github.com/prometheus/prometheus => github.com/prometheus/prometheus v1.8.2-0.20201130085533-a6e18916ab40

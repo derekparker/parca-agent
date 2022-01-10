@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 )
 
 // ErrInvalidPid is returned when attempting to detect a process with an invalid pid.
@@ -54,14 +55,25 @@ func (ns *JavaProcess) PrepareToProfile() error {
 	// Command to attach the agent to the process:
 	// (On linux we must be the same user/group as the process)
 	// sudo -u \#$TARGET_UID -g \#$TARGET_GID $JAVA_HOME/bin/java -Xms32m -Xmx128m -cp $AGENT_JAR:$JAVA_HOME/lib/tools.jar net.virtualvoid.perf.AttachOnce $pid $opts
-	javaHome := os.Getenv("JAVA_HOME")
-	java := "$JAVA_HOME/bin/java"
-	agent := "$AGENT_JAR"
-	opts := "$OPTS"
+	var (
+		javaHome = os.Getenv("JAVA_HOME")
+		java     = ns.path
+		agent    = "$AGENT_JAR"
+		opts     = "unfoldall"
+	)
 
 	cmd := exec.Command(java,
-		"-Xms32m", "-Xmx128m", "-cp", fmt.Sprintf("%s:%s/lib/tools.jar", agent, javaHome),
+		"-Xms32m",  // Minimum heap size.
+		"-Xmx128m", // Maximum heap size.
+		"-cp", fmt.Sprintf("%s:%s/lib/tools.jar", agent, javaHome),
 		"net.virtualvoid.perf.AttachOnce", fmt.Sprintf("%d", ns.pid), opts)
+
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Credential: &syscall.Credential{
+			Uid: uint32(os.Getuid()),
+			Gid: uint32(os.Getgid()),
+		},
+	}
 
 	return cmd.Run()
 }
